@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Rest\S3;
+
+/**
+ * Class ObjectPath.
+ *
+ * @package App\Rest\S3
+ *
+ * @author  Codememory
+ */
+class ObjectPath
+{
+    private ?string $path = null;
+
+    public function setPath(string $path): self
+    {
+        $this->path = $path;
+
+        return $this;
+    }
+
+    public function getBucket(): ?string
+    {
+        if (null !== $this->path) {
+            return explode('/', $this->path)[0];
+        }
+
+        return null;
+    }
+
+    public function getKey(): ?string
+    {
+        if (null !== $this->path) {
+            return mb_substr($this->path, mb_strpos($this->path, '/'));
+        }
+
+        return null;
+    }
+}

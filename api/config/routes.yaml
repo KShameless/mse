@@ -1,0 +1,19 @@
+public_api:
+    resource: ../src/Controller/PublicAvailable/*Controller.php
+    type: annotation
+    prefix: /api/{_locale}/public
+    trailing_slash_on_root: true
+    defaults:
+      request_type: 'public'
+
+admin_api:
+  resource: ../src/Controller/Admin/*Controller.php
+  type: annotation
+  prefix: /api/{_locale}/admin
+  trailing_slash_on_root: true
+  defaults:
+    request_type: 'admin'
+
+kernel:
+    resource: ../src/Kernel.php
+    type: annotation

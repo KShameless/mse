@@ -1,0 +1,204 @@
+imports:
+  - {resource: 'services/*.yaml'}
+
+parameters:
+    jwt.secrets: 'config/secrets/'
+    jwt.access_public_key: '%env(JWT_ACCESS_PUBLIC_KEY)%'
+    jwt.access_private_key: '%env(JWT_ACCESS_PRIVATE_KEY)%'
+    jwt.access_ttl: '%env(JWT_ACCESS_TTL)%'
+    jwt.refresh_public_key: '%env(JWT_REFRESH_PUBLIC_KEY)%'
+    jwt.refresh_private_key: '%env(JWT_REFRESH_PRIVATE_KEY)%'
+    jwt.refresh_ttl: '%env(JWT_REFRESH_TTL)%'
+
+    ws.count_process: '%env(int:WS_PROCESS_COUNT)%'
+    ws.url: '%env(WS_URL)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+    App\:
+        autowire: true
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+            - '../src/Tests/'
+            - '../src/Enum/'
+            - '../src/Service/'
+            - '../src/Rest/'
+            - '../src/DataFixtures/{Factory,Interfaces,AbstractDataFixture.php}'
+
+    Symfony\Component\HttpKernel\Profiler\Profiler: '@profiler'
+
+    Aws\S3\S3Client:
+        factory: [Aws\S3\S3Client, factory]
+        arguments:
+            -
+                credentials: {key: '%env(AWS_S3_KEY)%', secret: '%env(AWS_S3_SECRET)%'}
+                region: '%env(AWS_S3_REGION)%'
+                version: '%env(AWS_S3_VERSION)%'
+                endpoint: 's3:9000'
+                use_path_style_endpoint: true
+                disable_host_prefix_injection: true
+
+    App\EventListener\ApiExceptionListener:
+      tags:
+        - { name: kernel.event_listener, event: kernel.exception }
+
+    App\EventListener\Registration\CreateAccountActivationCodeListener:
+      tags:
+        - { name: kernel.event_listener, event: app.registration, method: onUserRegistration, priority: 1 }
+
+    App\EventListener\Registration\SendAccountActivationCodeListener:
+      tags:
+        - { name: kernel.event_listener, event: app.registration, method: onUserRegistration, priority: 0 }
+
+    App\EventListener\Registration\CreateRegistrationSessionListener:
+      tags:
+        - { name: kernel.event_listener, event: app.registration, method: onUserRegistration, priority: -1 }
+
+    App\EventListener\Registration\MailDomainCheckListener:
+      tags:
+        - { name: kernel.event_listener, event: app.registration, method: onUserRegistration, priority: 2 }
+
+    # Auth
+    App\EventListener\Authorization\CreateTempSessionListener:
+      tags:
+        - { name: kernel.event_listener, event: app.auth, method: onAuth, priority: 1 }
+
+    App\EventListener\Authorization\NotifyNewAuthorizationListener:
+      tags:
+        - { name: kernel.event_listener, event: app.auth, method: onAuth, priority: 0 }
+
+    App\EventListener\KernelController\AnnotationListener:
+      tags:
+        - { name: kernel.event_listener, event: kernel.controller, method: onKernelController }
+
+    # Password Reset
+    App\EventListener\RequestRestorationPassword\TemporaryBlockingListener:
+      tags:
+        - { name: kernel.event_listener, event: app.after-password-reset.request, method: onAfterRequestRestorationPassword, priority: 1 }
+
+    App\EventListener\RequestRestorationPassword\SendCodeListener:
+      tags:
+        - { name: kernel.event_listener, event: app.password-reset.request, method: onRequestRestorationPassword }
+
+    # Add Multimedia
+    App\EventListener\SaveMultimedia\Before\AlbumTypeCheckListener:
+      tags:
+        - { name: kernel.event_listener, event: app.multimedia.before-save, method: onBeforeSaveMultimedia, priority: 1 }
+
+    App\EventListener\SaveMultimedia\Before\MultimediaMimeTypeCheckListener:
+      tags:
+        - { name: kernel.event_listener, event: app.multimedia.before-save, method: onBeforeSaveMultimedia, priority: 0 }
+
+    App\EventListener\SaveMultimedia\Before\SubtitlesCheckListener:
+      tags:
+        - { name: kernel.event_listener, event: app.multimedia.before-save, method: onBeforeSaveMultimedia, priority: -1 }
+
+    App\EventListener\SaveMultimedia\After\FileUploadListener:
+      tags:
+        - { name: kernel.event_listener, event: app.multimedia.after-save, method: onAfterSaveMultimedia, priority: 1 }
+
+    App\EventListener\MultimediaStatusChange\StatusChangeHandlerListener:
+      tags:
+        - { name: kernel.event_listener, event: app.multimedia.status-change, method: onMultimediaStatusChange }
+
+    App\EventListener\SaveAlbum\UploadImageListener:
+      tags:
+        - { name: kernel.event_listener, event: app.album.save, method: onSaveAlbum, priority: 1 }
+
+    # Album status change
+    App\EventListener\AlbumStatusChange\SendNotificationAboutNewReleaseListener:
+      tags:
+        - { name: kernel.event_listener, event: app.album.status-change, method: onAlbumStatusChange, priority: 1 }
+
+    # Update multimedia to media library
+    App\EventListener\UpdateMultimediaMediaLibrary\UploadImageListener:
+      tags:
+        - { name: kernel.event_listener, event: app.media-library.multimedia.update, method: onUpdateMultimediaMediaLibrary, priority: 1 }
+
+    # Save playlist
+    App\EventListener\SavePlaylist\UploadImageListener:
+      tags:
+        - { name: kernel.event_listener, event: app.playlist.save, method: onSavePlaylist, priority: 1 }
+
+    App\Rest\Http\:
+      resource: '../src/Rest/Http/'
+      public: true
+      exclude:
+        - '../src/Rest/Http/{Interfaces,Exceptions}'
+
+    App\Rest\Validator\:
+      resource: '../src/Rest/Validator/'
+      public: true
+      exclude:
+        - '../src/Rest/Validator/ConstraintInfo.php'
+
+    App\Rest\S3\:
+      resource: '../src/Rest/S3/'
+      public: true
+      exclude:
+        - '../src/Rest/S3/{Interfaces}'
+        - '../src/Rest/S3/Uploader/{UploadedFile.php,AbstractUploader.php}'
+
+    App\Service\:
+      resource: '../src/Service/'
+      public: true
+      exclude:
+        - '../src/Service/DataRepresentation/AbstractDataRepresentation.php'
+        - '../src/Service/ObjectComparisonPercentageService.php'
+        - '../src/Service/Event/'
+
+    App\Service\DataRepresentation\:
+      resource: '../src/Service/DataRepresentation/'
+      public: true
+      exclude:
+        - '../src/Service/DataRepresentation/AbstractDataRepresentation.php'
+
+    App\DTO\:
+      resource: '../src/DTO/*DTO.php'
+      public: true
+      exclude:
+        - '../src/DTO/{Interfaces,Interceptors,AbstractDTO.php}'
+
+    App\ResponseData\Constraints\:
+      resource: '../src/ResponseData/Constraints/*Handler.php'
+      public: true
+
+    App\Annotation\:
+      resource: '../src/Annotation/*Handler.php'
+      public: true
+
+    App\Service\Platform\Google\Client:
+      arguments:
+        $clientId: '%env(GOOGLE_CLIENT_ID)%'
+        $secretKey: '%env(GOOGLE_CLIENT_SECRET)%'
+        $redirectUrl: '%env(GOOGLE_CLIENT_REDIRECT_URL)%'
+        $scopes:
+          - !php/const App\Enum\GoogleScopeEnum::EMAIL
+          - !php/const App\Enum\GoogleScopeEnum::PROFILE
+
+    App\Service\IPGeolocation\IPApi\Client:
+      arguments:
+        $client: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+        $url: 'http://ip-api.com/json/'
+        $fields:
+          - status
+          - continent
+          - continentCode
+          - country
+          - countryCode
+          - region
+          - regionName
+          - city
+          - district
+          - zip
+          - lat
+          - lon
+          - timezone
+          - offset
+          - currency
+          - proxy

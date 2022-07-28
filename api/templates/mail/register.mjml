@@ -1,0 +1,15 @@
+<mjml>
+    <mj-body>
+        <mj-section>
+            <mj-column>
+                <mj-text>
+                    <h1>Регистрация прошла успешно</h1>
+                </mj-text>
+
+                <mj-text>
+                    Код для активации аккаунта: {{ accountActivationCode.getCode() }}
+                </mj-text>
+            </mj-column>
+        </mj-section>
+    </mj-body>
+</mjml>
